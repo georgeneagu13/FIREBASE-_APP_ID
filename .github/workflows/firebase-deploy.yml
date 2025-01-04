@@ -1,10 +1,7 @@
 name: Firebase Deploy
-on: 
+on:
   push:
-    branches: 
-      - main
-  pull_request:
-    branches: 
+    branches:
       - main
 
 jobs:
@@ -12,16 +9,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
       - name: Install Dependencies
         run: npm install
-        
       - name: Deploy to Firebase
-        uses: w9jds/firebase-action@master
+        uses: FirebaseExtended/action-hosting-deploy@v0
         with:
-          args: deploy --only hosting
-        env:
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_APPTEMPLATE_11F2D }}
-          PROJECT_ID: apptemplate-11f2d
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_APPTEMPLATE_11F2D }}'
+          channelId: live
+          projectId: apptemplate-11f2d
 
     
