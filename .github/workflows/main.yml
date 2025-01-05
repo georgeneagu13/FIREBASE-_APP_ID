@@ -1,0 +1,102 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'yarn'
+    
+    - name: Install Dependencies
+      run: yarn install --frozen-lockfile
+    
+    - name: Run Linter
+      run: yarn lint
+    
+    - name: Run Unit Tests
+      run: yarn test:unit
+    
+    - name: Run Integration Tests
+      run: yarn test:integration
+    
+    - name: Generate Coverage Report
+      run: yarn test:coverage
+    
+    - name: Upload Coverage Report
+      uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        files: ./coverage/lcov.info
+        flags: unittests
+        name: codecov-umbrella
+
+  e2e:
+    runs-on: macos-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'yarn'
+    
+    - name: Install Dependencies
+      run: yarn install --frozen-lockfile
+    
+    - name: Install Detox Dependencies
+      run: |
+        brew tap wix/brew
+        brew install applesimutils
+    
+    - name: Build iOS App
+      run: yarn ios:build
+    
+    - name: Run E2E Tests
+      run: yarn test:e2e
+
+  deploy:
+    needs: [test, e2e]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'yarn'
+    
+    - name: Install Dependencies
+      run: yarn install --frozen-lockfile
+    
+    - name: Build App
+      run: yarn build
+    
+    - name: Deploy to App Store
+      if: success()
+      run: yarn deploy:ios
+      env:
+        APPLE_ID: ${{ secrets.APPLE_ID }}
+        APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+    
+    - name: Deploy to Play Store
+      if: success()
+      run: yarn deploy:android
+      env:
+        PLAY_STORE_JSON_KEY: ${{ secrets.PLAY_STORE_JSON_KEY }} 
